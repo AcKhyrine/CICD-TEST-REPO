@@ -59,12 +59,12 @@ jobs:
          git fetch origin release/sit
      - name: Validate proxy exists in release/sit
        run: |
-         echo "Checking proxy in release/sit..."
-         if git ls-tree -r origin/source --name-only | grep -q "src/main/apiproxies/${PROMOTE_PROXY}"; then
-           echo "::notice::Proxy exists in release/sit"
+         echo "Checking proxy in ${PROMOTE_SRC}..."
+         if git ls-tree -r origin/${PROMOTE_SRC} --name-only | grep -q "src/main/apiproxies/${PROMOTE_PROXY}"; then
+          echo "::notice::Proxy exists in ${PROMOTE_SRC}"
          else
-           echo "::error::Proxy ${PROMOTE_PROXY} not found in release/sit"
-           exit 1
+          echo "::error::Proxy ${PROMOTE_PROXY} not found in ${PROMOTE_SRC}"
+          exit 1
          fi
      - name: Copy proxy from release/sit
        run: |
