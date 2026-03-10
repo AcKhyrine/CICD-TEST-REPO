@@ -7,7 +7,7 @@ permissions:
   contents: write
 jobs:
  promote:
-   if: github.event.pull_request.base.ref == 'UAT' && github.event.pull_request.head.ref == 'sit'
+   if: github.event.pull_request.base.ref == 'release/uat' && github.event.pull_request.head.ref == 'release/sit'
    runs-on: ubuntu-latest
    steps:
      - name: Start Workflow
@@ -23,7 +23,7 @@ jobs:
           TGT="${{ github.event.pull_request.base.ref }}"
 
           # Define allowed promotions
-          ALLOWED=("sit:UAT" "uat:prod" "sit:prod")
+          ALLOWED=("release/sit:release/uat" "release/uat:prod" "release/sit:prod")
 
           if [[ ! " ${ALLOWED[*]} " =~ "${SRC}:${TGT}" ]]; then
             echo "::error::Promotion from '${SRC}' to '${TGT}' is not allowed."
@@ -54,22 +54,22 @@ jobs:
      - name: Set environment variable
        run: |
          echo "PROMOTE_PROXY=${{ steps.extract.outputs.proxy }}" >> $GITHUB_ENV
-     - name: Fetch sit branch
+     - name: Fetch release/sit branch
        run: |
-         git fetch origin sit
-     - name: Validate proxy exists in sit
+         git fetch origin release/sit
+     - name: Validate proxy exists in release/sit
        run: |
-         echo "Checking proxy in sit..."
-         if git ls-tree -r origin/sit --name-only | grep -q "src/main/apiproxies/${PROMOTE_PROXY}"; then
-           echo "::notice::Proxy exists in sit"
+         echo "Checking proxy in release/sit..."
+         if git ls-tree -r origin/source --name-only | grep -q "src/main/apiproxies/${PROMOTE_PROXY}"; then
+           echo "::notice::Proxy exists in release/sit"
          else
-           echo "::error::Proxy ${PROMOTE_PROXY} not found in sit"
+           echo "::error::Proxy ${PROMOTE_PROXY} not found in release/sit"
            exit 1
          fi
-     - name: Copy proxy from sit
+     - name: Copy proxy from release/sit
        run: |
-         echo "Copying proxy ${PROMOTE_PROXY} from sit..."
-         git checkout origin/sit -- src/main/apiproxies/${PROMOTE_PROXY}
+         echo "Copying proxy ${PROMOTE_PROXY} from release/sit..."
+         git checkout origin/source -- src/main/apiproxies/${PROMOTE_PROXY}
      - name: Commit promotion preparation
        run: |
          git config user.name "github-actions"
@@ -79,7 +79,7 @@ jobs:
            echo "::warning::No changes detected"
            exit 0
          fi
-         git commit -m "Prepare promotion of ${PROMOTE_PROXY} from sit to UAT"
+         git commit -m "Prepare promotion of ${PROMOTE_PROXY} from release/sit to release/uat"
      - name: Push changes to PR branch
        run: |
          git push origin HEAD:${{ github.event.pull_request.head.ref }}
