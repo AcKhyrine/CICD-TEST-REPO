@@ -48,12 +48,14 @@ jobs:
 
       - name: Copy proxy from source branch
         run: |
-          # Ensure we have the latest from origin
-          git fetch origin $PROMOTE_SRC
-          
-          echo "Copying proxy ${PROMOTE_PROXY} from ${PROMOTE_SRC}..."
-          # Checkout the specific folder from the source branch into the current workspace
-          git checkout origin/$PROMOTE_SRC -- src/main/apiproxies/$PROMOTE_PROXY
+          echo "Fetching latest from ${PROMOTE_SRC}..."
+          # Fetch the specific branch to update FETCH_HEAD
+          git fetch origin ${PROMOTE_SRC}
+
+          echo "Copying proxy ${PROMOTE_PROXY}..."
+          # Use FETCH_HEAD to precisely checkout the files from the branch we just fetched
+          git checkout FETCH_HEAD -- "src/main/apiproxies/${PROMOTE_PROXY}"
+
 
       - name: Commit and Push changes
         run: |
