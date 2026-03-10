@@ -151,19 +151,20 @@ jobs:
         run: |
           echo "PROMOTE_PROXY=${{ steps.extract.outputs.proxy }}" >> $GITHUB_ENV
 
-      - name: Fetch source branch fully
-        run: |
-          git fetch origin ${{ env.PROMOTE_SRC }}:${{ env.PROMOTE_SRC }}
-
       - name: Validate proxy exists in source branch
         run: |
           echo "Checking proxy in ${PROMOTE_SRC}..."
-          if git ls-tree -r ${PROMOTE_SRC} --name-only | grep -q "src/main/apiproxies/${PROMOTE_PROXY}"; then
+          if git ls-tree -r origin/${PROMOTE_SRC} --name-only | grep -q "src/main/apiproxies/${PROMOTE_PROXY}"; then
             echo "::notice::Proxy exists in ${PROMOTE_SRC}"
           else
             echo "::error::Proxy ${PROMOTE_PROXY} not found in ${PROMOTE_SRC}"
             exit 1
           fi
+
+      - name: Copy proxy from source branch
+        run: |
+          echo "Copying proxy ${PROMOTE_PROXY} from ${PROMOTE_SRC}..."
+          git checkout origin/${PROMOTE_SRC} -- src/main/apiproxies/${PROMOTE_PROXY}
 
       - name: Copy proxy from source branch
         run: |
