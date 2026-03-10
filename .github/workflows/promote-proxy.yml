@@ -41,18 +41,17 @@ jobs:
          git fetch origin release/sit
      - name: Validate proxy exists in release/sit
        run: |
-         echo "Checking proxy in release/sit..."
-          git fetch origin release/sit
-          if git ls-tree -r origin/sit --name-only | grep -q "src/main/apiproxies/${PROMOTE_PROXY}/"; then
-            echo "::notice::Proxy exists in release/sit"
-          else
-            echo "::error::Proxy ${PROMOTE_PROXY} not found in release/sit"
-            exit 1
-          fi
+        echo "Checking proxy in release/sit..."
+         if git ls-tree -r origin/release/sit --name-only | grep -q "src/main/apiproxies/${PROMOTE_PROXY}"; then
+           echo "::notice::Proxy exists in sit"
+         else
+           echo "::error::Proxy ${PROMOTE_PROXY} not found in release/sit"
+           exit 1
+         fi
      - name: Copy proxy from release/sit
        run: |
          echo "Copying proxy ${PROMOTE_PROXY} from release/sit..."
-         git checkout origin/sit -- src/main/apiproxies/${PROMOTE_PROXY}
+         git checkout origin/release/sit -- src/main/apiproxies/${PROMOTE_PROXY}
      - name: Commit promotion preparation
        run: |
          git config user.name "github-actions"
