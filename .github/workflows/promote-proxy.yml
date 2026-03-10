@@ -5,9 +5,10 @@ on:
 
 permissions:
   contents: write
+  
 jobs:
  promote:
-   if: github.event.pull_request.base.ref == 'release/uat' && github.event.pull_request.head.ref == 'release/sit'
+   if: github.event.pull_request.base.ref == 'UAT' && github.event.pull_request.head.ref == 'sit'
    runs-on: ubuntu-latest
    steps:
      - name: Start Workflow
