@@ -1,3 +1,94 @@
+# name: Prepare Proxy Promotion
+# on:
+#   pull_request:
+#     types: [opened, synchronize, reopened, edited]
+
+# permissions:
+#   contents: write
+# jobs:
+#  promote:
+#    if github.event.pull_request.base.ref == 'release/uat' && github.event.pull_request.head.ref == 'release/sit'
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Start Workflow
+#        run: |
+#           echo "===== Promotion Preparation Started ====="
+#           echo "PR Number: ${{ github.event.pull_request.number }"
+#           echo "Source Branch: ${{ github.event.pull_request.head.ref }"
+#           echo "Target Branch: ${{ github.event.pull_request.base.ref }"
+#      - name: Check if promotion is allowed
+#        id: check
+#        run: |
+#           SRC="${{ github.event.pull_request.head.ref }"
+#           TGT="${{ github.event.pull_request.base.ref }"
+
+#           # Define allowed promotions
+#           ALLOWED=("release/sit:release/uat" "release/uat:prod" "release/sit:prod")
+
+#           if [[ ! " ${ALLOWED[*]} " =~ "${SRC}:${TGT}" ]]; then
+#             echo "::error::Promotion from '${SRC}' to '${TGT}' is not allowed."
+#             exit 1
+#           fi
+
+#           echo "::notice::Promotion from '${SRC}' to '${TGT}' is allowed."
+#           echo "PROMOTE_SRC=$SRC" >> $GITHUB_ENV
+#           echo "PROMOTE_TGT=$TGT" >> $GITHUB_ENV
+#      - name: Checkout PR branch
+#        uses: actions/checkout@v4
+#        with:
+#          ref: ${{ github.event.pull_request.head.ref }
+#          fetch-depth: 0
+#      - name: Extract proxy name from PR description
+#        id: extract
+#        run: |
+#          BODY="${{ github.event.pull_request.body }"
+#          echo "PR Description:"
+#          echo "$BODY"
+#          PROXY=$(echo "$BODY" | grep -oP 'promote:\K[^\s]+')
+#          if [ -z "$PROXY" ]; then
+#            echo "::error::PR description must contain promote:<proxy-name>"
+#            exit 1
+#          fi
+#          echo "::notice::Proxy requested: $PROXY"
+#          echo "proxy=$PROXY" >> $GITHUB_OUTPUT
+#      - name: Set environment variable
+#        run: |
+#          echo "PROMOTE_PROXY=${{ steps.extract.outputs.proxy }" >> $GITHUB_ENV
+#      - name: Fetch release/sit branch
+#        run: |
+#          git fetch origin release/sit
+#      - name: Validate proxy exists in release/sit
+#        run: |
+#          echo "Checking proxy in ${PROMOTE_SRC}..."
+#          if git ls-tree -r origin/${PROMOTE_SRC} --name-only | grep -q "src/main/apiproxies/${PROMOTE_PROXY}"; then
+#           echo "::notice::Proxy exists in ${PROMOTE_SRC}"
+#          else
+#           echo "::error::Proxy ${PROMOTE_PROXY} not found in ${PROMOTE_SRC}"
+#           exit 1
+#          fi
+#      - name: Copy proxy from release/sit
+#        run: |
+#          echo "Copying proxy ${PROMOTE_PROXY} from release/sit..."
+#          git checkout origin/source -- src/main/apiproxies/${PROMOTE_PROXY}
+#      - name: Commit promotion preparation
+#        run: |
+#          git config user.name "github-actions"
+#          git config user.email "github-actions@github.com"
+#          git add src/main/apiproxies/${PROMOTE_PROXY}
+#          if git diff --cached --quiet; then
+#            echo "::warning::No changes detected"
+#            exit 0
+#          fi
+#          git commit -m "Prepare promotion of ${PROMOTE_PROXY} from release/sit to release/uat"
+#      - name: Push changes to PR branch
+#        run: |
+#          git push origin HEAD:${{ github.event.pull_request.head.ref }
+#      - name: Finish Workflow
+#        run: |
+#          echo "::notice::Promotion preparation completed."
+#          echo "Reviewer can now inspect the changes in this PR."
+
+
 name: Prepare Proxy Promotion
 on:
   pull_request:
