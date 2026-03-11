@@ -180,48 +180,47 @@ jobs:
   promote:
     runs-on: ubuntu-latest
 
+    concurrency:
+      group: promote-sit-uat
+      cancel-in-progress: false
+
     steps:
 
-      - name: Start Promotion
-        run: |
-          echo "Starting proxy promotion"
-          echo "Proxy: ${{ inputs.proxy }}"
-
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set Variables
+      - name: Set variables
         run: |
           echo "PROMOTE_PROXY=${{ inputs.proxy }}" >> $GITHUB_ENV
           echo "PROMO_BRANCH=promotion/sit-uat" >> $GITHUB_ENV
           echo "SOURCE_BRANCH=release/sit" >> $GITHUB_ENV
           echo "TARGET_BRANCH=release/uat" >> $GITHUB_ENV
 
-      - name: Fetch Branches
+      - name: Fetch branches
         run: |
           git fetch origin $SOURCE_BRANCH
           git fetch origin $TARGET_BRANCH
 
-      - name: Validate Proxy Exists in SIT
+      - name: Validate proxy exists
         run: |
           if git ls-tree -r origin/$SOURCE_BRANCH --name-only | grep -q "src/main/apiproxies/${PROMOTE_PROXY}"; then
-            echo "Proxy found in SIT"
+            echo "Proxy found"
           else
-            echo "::error::Proxy ${PROMOTE_PROXY} not found in $SOURCE_BRANCH"
+            echo "Proxy not found"
             exit 1
           fi
 
-      - name: Prepare Promotion Branch
+      - name: Prepare promotion branch
         run: |
           git checkout -B $PROMO_BRANCH origin/$TARGET_BRANCH
 
-      - name: Copy Proxy from SIT
+      - name: Copy proxy
         run: |
           git checkout origin/$SOURCE_BRANCH -- src/main/apiproxies/${PROMOTE_PROXY}
 
-      - name: Commit Changes
+      - name: Commit
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
@@ -229,25 +228,21 @@ jobs:
           git add src/main/apiproxies/${PROMOTE_PROXY}
 
           if git diff --cached --quiet; then
-            echo "No changes detected"
+            echo "No changes"
             exit 0
           fi
 
           git commit -m "Promote ${PROMOTE_PROXY} from SIT to UAT"
 
-      - name: Push Promotion Branch
+      - name: Push branch
         run: |
-          git push origin $PROMO_BRANCH --force
+          git push origin promotion/sit-uat --force
 
-      - name: Create or Update Pull Request
+      - name: Create PR
         uses: peter-evans/create-pull-request@v6
         with:
           branch: promotion/sit-uat
           base: release/uat
           title: "Proxy Promotion SIT → UAT"
           body: |
-            Automated proxy promotion.
-
-            Proxy: `${{ env.PROMOTE_PROXY }}`
-            Source: release/sit
-            Target: release/uat
+            Proxy: ${{ env.PROMOTE_PROXY }}
