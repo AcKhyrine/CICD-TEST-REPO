@@ -1,174 +1,18 @@
-# name: Prepare Proxy Promotion (release/sit → release/uat)
-# on:
-#   pull_request:
-#     types: [opened, synchronize, reopened, edited]
-
-# permissions:
-#   contents: write
-# jobs:
-#  promote:
-#    ifgithub.event.pull_request.base.ref == 'release/uat' && github.event.pull_request.head.ref == 'release/sit'
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Start Workflow
-#        run: |
-#          echo "===== Promotion Preparation Started ====="
-#          echo "PR Number: ${{ github.event.pull_request.number }"
-#          echo "Source Branch: ${{ github.event.pull_request.head.ref }"
-#          echo "Target Branch: ${{ github.event.pull_request.base.ref }"
-#      - name: Checkout PR branch
-#        uses: actions/checkout@v4
-#        with:
-#          ref: ${{ github.event.pull_request.head.ref }
-#          fetch-depth: 0
-#      - name: Extract proxy name from PR description
-#        id: extract
-#        run: |
-#          BODY="${{ github.event.pull_request.body }"
-#          echo "PR Description:"
-#          echo "$BODY"
-#          PROXY=$(echo "$BODY" | grep -oP 'promote:\K[^\s]+')
-#          if [ -z "$PROXY" ]; then
-#            echo "::error::PR description must contain promote:<proxy-name>"
-#            exit 1
-#          fi
-#          echo "::notice::Proxy requested: $PROXY"
-#          echo "proxy=$PROXY" >> $GITHUB_OUTPUT
-#      - name: Set environment variable
-#        run: |
-#          echo "PROMOTE_PROXY=${{ steps.extract.outputs.proxy }" >> $GITHUB_ENV
-#      - name: Fetch release/sit branch
-#        run: |
-#          git fetch origin release/sit
-#      - name: Validate proxy exists in release/sit
-#        run: |
-#         echo "Checking proxy in release/sit..."
-#          if git ls-tree -r origin/release/sit --name-only | grep -q "src/main/apiproxies/${PROMOTE_PROXY}"; then
-#            echo "::notice::Proxy exists in sit"
-#          else
-#            echo "::error::Proxy ${PROMOTE_PROXY} not found in release/sit"
-#            exit 1
-#          fi
-#      - name: Copy proxy from release/sit
-#        run: |
-#          echo "Copying proxy ${PROMOTE_PROXY} from release/sit..."
-#          git checkout origin/release/sit -- src/main/apiproxies/${PROMOTE_PROXY}
-#      - name: Commit promotion preparation
-#        run: |
-#          git config user.name "github-actions"
-#          git config user.email "github-actions@github.com"
-#          git add src/main/apiproxies/${PROMOTE_PROXY}
-#          if git diff --cached --quiet; then
-#            echo "::warning::No changes detected"
-#            exit 0
-#          fi
-#          git commit -m "Prepare promotion of ${PROMOTE_PROXY} from release/sit to release/uat"
-#      - name: Push changes to PR branch
-#        run: |
-#          git push origin HEAD:${{ github.event.pull_request.head.ref }
-#      - name: Finish Workflow
-#        run: |
-#          echo "::notice::Promotion preparation completed."
-#          echo "Reviewer can now inspect the changes in this PR."
-
-
-# name: Prepare Proxy Promotion (release/sit → release/uat)
-
-# on:
-#   pull_request:
-#     branches:
-#       - release/uat
-#     types: [opened, synchronize, reopened, edited]
-
-# permissions:
-#   contents: write
-
-# jobs:
-#   promote:
-#     if github.event.pull_request.head.ref == 'release/sit'
-#     runs-on: ubuntu-latest
-#     steps:
-
-#       - name: Start Workflow
-#         run: |
-#           echo "===== Promotion Preparation Started ====="
-#           echo "PR Number: ${{ github.event.pull_request.number }"
-#           echo "Source Branch: ${{ github.event.pull_request.head.ref }"
-#           echo "Target Branch: ${{ github.event.pull_request.base.ref }"
-
-#       - name: Checkout PR branch
-#         uses: actions/checkout@v4
-#         with:
-#           ref: ${{ github.event.pull_request.head.ref }
-#           fetch-depth: 0
-
-#       - name: Extract proxy name from PR description
-#         id: extract
-#         run: |
-#           BODY="${{ github.event.pull_request.body }"
-#           echo "PR Description:"
-#           echo "$BODY"
-#           PROXY=$(echo "$BODY" | grep -oP 'promote:\K[^\s]+')
-#           if [ -z "$PROXY" ]; then
-#             echo "::error::PR description must contain promote:<proxy-name>"
-#             exit 1
-#           fi
-#           echo "::notice::Proxy requested: $PROXY"
-#           echo "proxy=$PROXY" >> $GITHUB_OUTPUT
-
-#       - name: Set environment variable
-#         run: echo "PROMOTE_PROXY=${{ steps.extract.outputs.proxy }" >> $GITHUB_ENV
-
-#       - name: Fetch release/sit branch
-#         run: git fetch origin release/sit
-
-#       - name: Validate proxy exists in release/sit
-#         run: |
-#           echo "Checking proxy in release/sit..."
-#           if git ls-tree -r origin/release/sit --name-only | grep -q "src/main/apiproxies/${PROMOTE_PROXY}"; then
-#             echo "::notice::Proxy exists in release/sit"
-#           else
-#             echo "::error::Proxy ${PROMOTE_PROXY} not found in release/sit"
-#             exit 1
-#           fi
-
-#       - name: Copy only the specified proxy folder
-#         run: |
-#           echo "Copying proxy ${PROMOTE_PROXY} from release/sit..."
-#           # Checkout only the proxy folder into the current branch
-#           git checkout origin/release/sit -- src/main/apiproxies/${PROMOTE_PROXY}
-
-#       - name: Commit only the proxy folder
-#         run: |
-#           git config user.name "github-actions"
-#           git config user.email "github-actions@github.com"
-
-#           # Make sure only the proxy folder is staged
-#           git reset -- .
-#           git add src/main/apiproxies/${PROMOTE_PROXY}
-
-#           if git diff --cached --quiet; then
-#             echo "::warning::No changes detected for ${PROMOTE_PROXY}"
-#             exit 0
-#           fi
-
-#           git commit -m "Prepare promotion of ${PROMOTE_PROXY} from release/sit to release/uat"
-
-#       - name: Push changes to PR branch
-#         run: git push origin HEAD:${{ github.event.pull_request.head.ref }
-
-#       - name: Finish Workflow
-#         run: |
-#           echo "::notice::Promotion preparation completed."
-#           echo "Reviewer can now inspect the changes in this PR."
-
-name: Promote Proxy SIT → UAT
+name: Promote Commit (SIT/UAT → Target)
 
 on:
   workflow_dispatch:
     inputs:
-      proxy:
-        description: "Proxy name to promote"
+      source_branch:
+        description: "Source branch (SIT or UAT)"
+        required: true
+        type: string
+      target_branch:
+        description: "Target branch (UAT or MAIN)"
+        required: true
+        type: string
+      commit_hash:
+        description: "Commit hash to promote"
         required: true
         type: string
 
@@ -180,69 +24,53 @@ jobs:
   promote:
     runs-on: ubuntu-latest
 
-    concurrency:
-      group: promote-sit-uat
-      cancel-in-progress: false
-
     steps:
-
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set variables
+      - name: Set environment variables
         run: |
-          echo "PROMOTE_PROXY=${{ inputs.proxy }}" >> $GITHUB_ENV
-          echo "PROMO_BRANCH=promotion/sit-uat" >> $GITHUB_ENV
-          echo "SOURCE_BRANCH=release/sit" >> $GITHUB_ENV
-          echo "TARGET_BRANCH=release/uat" >> $GITHUB_ENV
+          echo "SOURCE_BRANCH=${{ inputs.source_branch }}" >> $GITHUB_ENV
+          echo "TARGET_BRANCH=${{ inputs.target_branch }}" >> $GITHUB_ENV
+          echo "COMMIT_HASH=${{ inputs.commit_hash }}" >> $GITHUB_ENV
+          echo "PROMO_BRANCH=promotion/${{ inputs.commit_hash }}" >> $GITHUB_ENV
+
+      - name: Validate allowed promotion paths
+        run: |
+          if [[ "$SOURCE_BRANCH" == "release/sit" && "$TARGET_BRANCH" != "release/uat" && "$TARGET_BRANCH" != "main" ]]; then
+            echo "::error::Invalid promotion: SIT can only go to UAT or MAIN"
+            exit 1
+          fi
+
+          if [[ "$SOURCE_BRANCH" == "release/uat" && "$TARGET_BRANCH" != "main" ]]; then
+            echo "::error::Invalid promotion: UAT can only go to MAIN"
+            exit 1
+          fi
 
       - name: Fetch branches
         run: |
           git fetch origin $SOURCE_BRANCH
           git fetch origin $TARGET_BRANCH
 
-      - name: Validate proxy exists
-        run: |
-          if git ls-tree -r origin/$SOURCE_BRANCH --name-only | grep -q "src/main/apiproxies/${PROMOTE_PROXY}"; then
-            echo "Proxy found"
-          else
-            echo "Proxy not found"
-            exit 1
-          fi
-
-      - name: Prepare promotion branch
+      - name: Create promotion branch from target
         run: |
           git checkout -B $PROMO_BRANCH origin/$TARGET_BRANCH
 
-      - name: Copy proxy
+      - name: Cherry-pick the commit
         run: |
-          git checkout origin/$SOURCE_BRANCH -- src/main/apiproxies/${PROMOTE_PROXY}
+          git cherry-pick $COMMIT_HASH || { echo "::error::Cherry-pick failed. Resolve conflicts manually."; exit 1; }
 
-      - name: Commit
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+      - name: Push promotion branch
+        run: git push origin $PROMO_BRANCH --force
 
-          git add src/main/apiproxies/${PROMOTE_PROXY}
-
-          if git diff --cached --quiet; then
-            echo "No changes"
-            exit 0
-          fi
-
-          git commit -m "Promote ${PROMOTE_PROXY} from SIT to UAT"
-
-      - name: Push branch
-        run: |
-          git push origin promotion/sit-uat --force
-
-      - name: Create PR
+      - name: Create or update Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
-          branch: promotion/sit-uat
-          base: release/uat
-          title: "Proxy Promotion SIT → UAT"
+          branch: $PROMO_BRANCH
+          base: $TARGET_BRANCH
+          title: "Promote commit $COMMIT_HASH from $SOURCE_BRANCH → $TARGET_BRANCH"
           body: |
-            Proxy: ${{ env.PROMOTE_PROXY }}
+            Automated promotion of commit `$COMMIT_HASH` from branch `$SOURCE_BRANCH` to `$TARGET_BRANCH`.
+          create-if-empty: true
